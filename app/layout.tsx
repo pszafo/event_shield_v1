@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "RainShield – Event Insurance MVP",
+  title: "Event Shield – Event Insurance MVP",
   description: "Micro-insurance for small events (MVP)",
 };
 
