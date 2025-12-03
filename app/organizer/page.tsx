@@ -1,4 +1,5 @@
 import { createEvent, listEvents, listTicketsForEvent } from "../../lib/store";
+import { redirect } from "next/navigation";
 
 async function createEventAction(formData: FormData) {
   "use server";
@@ -11,6 +12,8 @@ async function createEventAction(formData: FormData) {
     ticketPrice: Number(formData.get("ticketPrice") || 0),
     insurancePrice: Number(formData.get("insurancePrice") || 0),
   });
+    redirect("/organizer");
+
 }
 
 export default async function OrganizerPage() {
