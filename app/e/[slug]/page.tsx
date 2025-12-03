@@ -1,4 +1,4 @@
-import { getEventBySlug, createTicket } from "@/lib/store";
+import { getEventBySlug, createTicket } from "../../../lib/store";
 import { redirect } from "next/navigation";
 
 type Props = {
