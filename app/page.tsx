@@ -7,7 +7,7 @@ export default function HomePage() {
 
       <p style={{ fontSize: "14px", color: "#555" }}>
         This is a demo where organizers can create events and attendees can book
-        tickets with an optional <strong>rain protection add-on</strong>.
+        tickets with an optional <strong> Event protection add-on</strong>.
       </p>
 
       <div style={{ marginTop: "15px" }}>
@@ -50,8 +50,8 @@ export default function HomePage() {
       <ol style={{ fontSize: "14px", color: "#555", lineHeight: "22px" }}>
         <li>Organizer creates an event.</li>
         <li>System generates a public event link.</li>
-        <li>Organizer shares the link.</li>
-        <li>Attendee selects ticket only OR ticket + insurance.</li>
+        <li>Organizer shares the link for people to book.</li>
+        <li>Attendee selects ticket only OR ticket + event insurance.</li>
         <li>Booking recorded (no real payment in V1).</li>
       </ol>
     </div>
