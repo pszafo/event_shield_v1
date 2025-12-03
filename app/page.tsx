@@ -2,7 +2,7 @@ export default function HomePage() {
   return (
     <div style={{ background: "white", padding: "20px", borderRadius: "8px" }}>
       <h1 style={{ fontSize: "24px", marginBottom: "10px" }}>
-        RainShield – Micro-insurance MVP
+        Event Shield – Micro-insurance MVP
       </h1>
 
       <p style={{ fontSize: "14px", color: "#555" }}>
