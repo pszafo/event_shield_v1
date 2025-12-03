@@ -1,4 +1,4 @@
-import { createEvent, listEvents, listTicketsForEvent } from "@/lib/store";
+import { createEvent, listEvents, listTicketsForEvent } from "../../lib/store";
 
 async function createEventAction(formData: FormData) {
   "use server";
