@@ -55,8 +55,8 @@ export default function EventPage({ params, searchParams }: Props) {
           fontSize: "13px",
         }}
       >
-        <strong>Ticket:</strong> ₹0 (demo) <br />
-        <strong>Event protection:</strong> +₹0 (demo)
+        <strong>Ticket:</strong> ₹499 (demo) <br />
+        <strong>Event protection for full refund incase of cancellation:</strong> +₹19 (demo)
       </div>
 
       {/* FALLBACK BOOKING FORM */}
