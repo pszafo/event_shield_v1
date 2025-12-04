@@ -56,7 +56,7 @@ export default function EventPage({ params, searchParams }: Props) {
         }}
       >
         <strong>Ticket:</strong> ₹0 (demo) <br />
-        <strong>Rain protection:</strong> +₹0 (demo)
+        <strong>Event protection:</strong> +₹0 (demo)
       </div>
 
       {/* FALLBACK BOOKING FORM */}
@@ -101,7 +101,7 @@ export default function EventPage({ params, searchParams }: Props) {
 
         <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <input type="checkbox" name="hasInsurance" />
-          Add rain protection (demo)
+          Add event protection for ₹11 (demo)
         </label>
 
         <br />
