@@ -14,5 +14,7 @@
   "typescript": "5.3.3",
   "@types/react": "18.2.15",
   "@types/node": "20.5.1"
+  "openai": "^4.52.0"        // ← add this
+
 }
 }
