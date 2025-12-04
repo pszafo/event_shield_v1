@@ -101,7 +101,7 @@ export default function EventPage({ params, searchParams }: Props) {
 
         <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <input type="checkbox" name="hasInsurance" />
-          Add event protection for ₹11 (demo)
+          Add event protection for ₹19 (demo)
         </label>
 
         <br />
