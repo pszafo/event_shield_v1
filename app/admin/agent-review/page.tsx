@@ -56,12 +56,13 @@ export default async function AgentReviewPage({ searchParams }: AgentReviewProps
   }
 
   // AI EVALUATION (OpenAI)
-  let aiVerdict: string | null = null;
+  // AI EVALUATION (OpenAI)
+let aiVerdict: string | null = null;
 
-  if (evaluation && process.env.OPENAI_API_KEY) {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+if (evaluation && process.env.OPENAI_API_KEY) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const prompt = `
+  const prompt = `
 You are an insurance assessment agent. Evaluate whether the event cancellation appears genuine or suspicious.
 
 Event Details:
@@ -75,19 +76,27 @@ Event Details:
 - Rule Model Decision: ${evaluation.decision}
 
 Respond with a clear, short verdict in 3–5 sentences.
-    `;
+  `;
 
-    try {
-      const result = await client.responses.create({
-        model: "gpt-4.1-mini",
-        input: prompt,
-      });
+  try {
+    const result = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
 
-      aiVerdict = result.output_text || "AI could not generate a verdict.";
-    } catch (err: any) {
-      aiVerdict = "AI evaluation failed: " + err.message;
-    }
+    aiVerdict =
+      result.choices?.[0]?.message?.content ??
+      "AI could not generate a verdict.";
+  } catch (err: any) {
+    aiVerdict = "AI evaluation failed: " + err.message;
   }
+}
+
 
   return (
     <div style={{ padding: "40px", maxWidth: "900px" }}>
