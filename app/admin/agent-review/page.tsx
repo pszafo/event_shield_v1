@@ -2,6 +2,7 @@
 
 import { evaluateCancellation } from "../../../lib/cancellationEvaluator";
 import { inferWeatherFromOpenMeteo } from "../../../lib/openMeteo";
+import OpenAI from "openai";
 
 function asString(v: any): string {
   return Array.isArray(v) ? v[0] : v || "";
@@ -17,12 +18,10 @@ type ClaimQuery = {
   orgRate?: string;
 };
 
-type AgentReviewProps = {
-  searchParams?: ClaimQuery;
-};
+type AgentReviewProps = { searchParams?: ClaimQuery };
 
 export default async function AgentReviewPage({ searchParams }: AgentReviewProps) {
-  const params: ClaimQuery = searchParams || {};
+  const params = searchParams || {};
 
   const reason = asString(params.reason);
   const eventDate = asString(params.eventDate);
@@ -32,8 +31,9 @@ export default async function AgentReviewPage({ searchParams }: AgentReviewProps
   const hoursBefore = Number(asString(params.hoursBefore ?? "0"));
   const orgRate = Number(asString(params.orgRate ?? "0")) / 100;
 
-  // Weather lookup from Open-Meteo
+  // WEATHER LOOKUP
   let weatherInfo: { severity: string; explanation: string } | null = null;
+
   if (eventDate && lat && lon) {
     weatherInfo = await inferWeatherFromOpenMeteo(
       Number(lat),
@@ -42,8 +42,9 @@ export default async function AgentReviewPage({ searchParams }: AgentReviewProps
     );
   }
 
-  // Evaluate cancellation if we have enough info
+  // RULE-BASED EVALUATION (our own scoring)
   let evaluation: any = null;
+
   if (reason && eventDate && lat && lon) {
     evaluation = evaluateCancellation({
       reason,
@@ -52,6 +53,40 @@ export default async function AgentReviewPage({ searchParams }: AgentReviewProps
       hoursBeforeEvent: hoursBefore,
       organizerCancellationRate: orgRate,
     });
+  }
+
+  // AI EVALUATION (OpenAI)
+  let aiVerdict: string | null = null;
+
+  if (evaluation && process.env.OPENAI_API_KEY) {
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    const prompt = `
+You are an insurance assessment agent. Evaluate whether the event cancellation appears genuine or suspicious.
+
+Event Details:
+- Reason: ${reason}
+- Weather Severity: ${weatherInfo?.severity}
+- Weather Explanation: ${weatherInfo?.explanation}
+- Participant Confirmations: ${yesRatio * 100}%
+- Hours Before Event Cancelled: ${hoursBefore}
+- Organizer Past Cancellation Rate: ${orgRate * 100}%
+- Rule Model Score: ${evaluation.reliabilityScore}
+- Rule Model Decision: ${evaluation.decision}
+
+Respond with a clear, short verdict in 3–5 sentences.
+    `;
+
+    try {
+      const result = await client.responses.create({
+        model: "gpt-4.1-mini",
+        input: prompt,
+      });
+
+      aiVerdict = result.output_text || "AI could not generate a verdict.";
+    } catch (err: any) {
+      aiVerdict = "AI evaluation failed: " + err.message;
+    }
   }
 
   return (
@@ -160,23 +195,31 @@ export default async function AgentReviewPage({ searchParams }: AgentReviewProps
         </div>
       )}
 
-      {/* CANCELLATION ASSESSMENT */}
+      {/* RULE MODEL RESULTS */}
       {evaluation && (
         <div style={{ marginTop: "40px" }}>
-          <h3>Risk Assessment</h3>
+          <h3>Rule-Based Assessment</h3>
           <p>
-            <b>Reliability Score:</b> {evaluation.reliabilityScore}
+            <b>Score:</b> {evaluation.reliabilityScore}
           </p>
           <p>
             <b>Decision:</b> {evaluation.decision}
           </p>
 
-          <h4>Factors Considered:</h4>
+          <h4>Factors:</h4>
           <ul>
             {evaluation.factorNotes.map((note: string, i: number) => (
               <li key={i}>{note}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* AI VERDICT */}
+      {aiVerdict && (
+        <div style={{ marginTop: "40px", padding: "20px", border: "1px solid #ccc", borderRadius: "8px" }}>
+          <h3>AI Final Verdict</h3>
+          <p style={{ whiteSpace: "pre-wrap" }}>{aiVerdict}</p>
         </div>
       )}
     </div>
