@@ -7,7 +7,20 @@ function asString(v: any) {
   return Array.isArray(v) ? v[0] : v || "";
 }
 
-export default async function AgentReviewPage({ searchParams }: any) {
+type ClaimQuery = {
+  reason?: string
+  eventDate?: string
+  lat?: string
+  lon?: string
+  yesRatio?: string
+  hoursBefore?: string
+  orgRate?: string
+};
+
+export default async function ClaimReviewPage({
+  searchParams = {} as ClaimQuery,
+}) 
+{
   const eventDate = asString(searchParams.eventDate);
   const lat = asString(searchParams.lat);
   const lon = asString(searchParams.lon);
