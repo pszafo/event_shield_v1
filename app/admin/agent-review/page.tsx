@@ -1,6 +1,7 @@
 // app/admin/agent-review/page.tsx
 import { evaluateCancellation } from "../../../lib/cancellationEvaluator";
 import type { WeatherSeverity } from "../../../lib/cancellationEvaluator";
+import { inferWeatherFromOpenMeteo } from "../../../lib/openMeteo";
 import OpenAI from "openai";
 
 type PageProps = {
@@ -9,34 +10,69 @@ type PageProps = {
 
 export default async function AgentReviewPage({ searchParams = {} }: PageProps) {
   const reason = asString(searchParams.reason);
-  const weather = (asString(searchParams.weather) || "none") as WeatherSeverity;
+  const manualWeather = (asString(searchParams.weather) || "none") as WeatherSeverity;
   const yesRatioStr = asString(searchParams.yesRatio);
   const hoursBeforeStr = asString(searchParams.hoursBefore);
   const orgRateStr = asString(searchParams.orgRate);
+
+  const eventDateStr = asString(searchParams.eventDate); // YYYY-MM-DD
+  const latStr = asString(searchParams.lat);
+  const lonStr = asString(searchParams.lon);
 
   const hasInput =
     reason ||
     yesRatioStr !== "" ||
     hoursBeforeStr !== "" ||
-    orgRateStr !== "";
+    orgRateStr !== "" ||
+    eventDateStr !== "" ||
+    latStr !== "" ||
+    lonStr !== "";
 
   let result: ReturnType<typeof evaluateCancellation> | null = null;
   let aiSummary: string | null = null;
+  let weatherEvidence: string | null = null;
+  let weatherUsedForEval: WeatherSeverity = manualWeather;
 
   if (hasInput) {
     const yesRatio = clamp01(parseFloat(yesRatioStr || "0"));
     const hoursBefore = Math.max(0, parseFloat(hoursBeforeStr || "0"));
     const orgRate = clamp01(parseFloat(orgRateStr || "0"));
 
+    // 1) Try to infer weather from Open-Meteo if all fields provided
+    if (eventDateStr && latStr && lonStr) {
+      const lat = parseFloat(latStr);
+      const lon = parseFloat(lonStr);
+      if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+        try {
+          const inferred = await inferWeatherFromOpenMeteo(lat, lon, eventDateStr);
+          if (inferred) {
+            weatherUsedForEval = inferred.severity;
+            weatherEvidence = inferred.explanation;
+          } else {
+            weatherEvidence =
+              "Could not fetch weather data from Open-Meteo – falling back to manually selected weather severity.";
+          }
+        } catch (e) {
+          console.error("Open-Meteo integration error", e);
+          weatherEvidence =
+            "Open-Meteo request failed – falling back to manually selected weather severity.";
+        }
+      } else {
+        weatherEvidence =
+          "Latitude/longitude values were invalid – cannot auto-check weather.";
+      }
+    }
+
+    // 2) Run rule-based evaluation
     result = evaluateCancellation({
       reason: reason || "",
-      weatherSeverity: weather,
+      weatherSeverity: weatherUsedForEval,
       participantYesRatio: yesRatio,
       hoursBeforeEvent: hoursBefore,
       organizerCancellationRate: orgRate,
     });
 
-    // Optional AI layer – ONLY runs if OPENAI_API_KEY is set
+    // 3) Optional AI layer – ONLY runs if OPENAI_API_KEY is set
     if (process.env.OPENAI_API_KEY) {
       try {
         const client = new OpenAI({
@@ -45,11 +81,12 @@ export default async function AgentReviewPage({ searchParams = {} }: PageProps) 
 
         const prompt = buildAiPrompt(
           reason,
-          weather,
+          weatherUsedForEval,
           yesRatio,
           hoursBefore,
           orgRate,
-          result
+          result,
+          weatherEvidence
         );
 
         const completion = await client.chat.completions.create({
@@ -80,8 +117,8 @@ export default async function AgentReviewPage({ searchParams = {} }: PageProps) 
       </h1>
       <p style={{ fontSize: "14px", color: "#555", marginBottom: "16px" }}>
         Enter details for a cancelled event. The tool will calculate a
-        reliability score and, if configured, ask an AI assistant for a short
-        verdict on whether the cancellation looks genuine or suspicious.
+        reliability score and, if configured, use Open-Meteo and an AI assistant
+        to judge whether the cancellation looks genuine or suspicious.
       </p>
 
       {/* FORM */}
@@ -110,11 +147,11 @@ export default async function AgentReviewPage({ searchParams = {} }: PageProps) 
 
         <div style={{ marginBottom: "12px" }}>
           <label>
-            Weather severity
+            Manual weather severity (fallback)
             <br />
             <select
               name="weather"
-              defaultValue={weather}
+              defaultValue={manualWeather}
               style={{ width: "100%", padding: "8px", marginTop: "4px" }}
             >
               <option value="none">None / clear</option>
@@ -123,6 +160,10 @@ export default async function AgentReviewPage({ searchParams = {} }: PageProps) 
               <option value="storm">Storm / thunderstorm</option>
             </select>
           </label>
+          <p style={{ fontSize: "12px", color: "#777", marginTop: "4px" }}>
+            If you also provide location + date below, Open-Meteo will override
+            this based on real rain data.
+          </p>
         </div>
 
         <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
@@ -173,6 +214,54 @@ export default async function AgentReviewPage({ searchParams = {} }: PageProps) 
           </label>
         </div>
 
+        <hr style={{ margin: "18px 0" }} />
+
+        <h3 style={{ fontSize: "16px", marginBottom: "4px" }}>
+          Automatic weather verification (Open-Meteo)
+        </h3>
+        <p style={{ fontSize: "12px", color: "#777", marginBottom: "8px" }}>
+          Optional: provide event date and coordinates to auto-check actual rain
+          for that place and day. This will override the weather severity above.
+        </p>
+
+        <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
+          <label style={{ flex: 1 }}>
+            Event date (YYYY-MM-DD)
+            <br />
+            <input
+              type="text"
+              name="eventDate"
+              defaultValue={eventDateStr || ""}
+              placeholder="e.g. 2025-02-20"
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+            />
+          </label>
+
+          <label style={{ flex: 1 }}>
+            Latitude
+            <br />
+            <input
+              type="text"
+              name="lat"
+              defaultValue={latStr || ""}
+              placeholder="e.g. 12.9716"
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+            />
+          </label>
+
+          <label style={{ flex: 1 }}>
+            Longitude
+            <br />
+            <input
+              type="text"
+              name="lon"
+              defaultValue={lonStr || ""}
+              placeholder="e.g. 77.5946"
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+            />
+          </label>
+        </div>
+
         <button
           type="submit"
           style={{
@@ -206,6 +295,15 @@ export default async function AgentReviewPage({ searchParams = {} }: PageProps) 
               ? "Potentially fraudulent"
               : "Uncertain – needs manual review"}
           </p>
+
+          {weatherEvidence && (
+            <>
+              <h3 style={{ marginTop: "12px", marginBottom: "4px" }}>
+                Weather evidence (Open-Meteo)
+              </h3>
+              <p style={{ fontSize: "13px", color: "#555" }}>{weatherEvidence}</p>
+            </>
+          )}
 
           <h3 style={{ marginTop: "12px", marginBottom: "4px" }}>
             Factor breakdown
@@ -248,7 +346,8 @@ function buildAiPrompt(
   yesRatio: number,
   hoursBefore: number,
   orgRate: number,
-  result: ReturnType<typeof evaluateCancellation>
+  result: ReturnType<typeof evaluateCancellation>,
+  weatherEvidence: string | null
 ): string {
   const yesPercent = Math.round(yesRatio * 100);
   const orgPercent = Math.round(orgRate * 100);
@@ -258,7 +357,8 @@ We are evaluating whether an event cancellation is genuine or fraudulent for mic
 
 Inputs:
 - Organizer reason: "${reason || "not provided"}"
-- Weather severity: ${weather}
+- Weather severity used for evaluation: ${weather}
+- Weather evidence from Open-Meteo: ${weatherEvidence || "not available"}
 - Participant confirmations: ${yesPercent}% confirmed the event was cancelled
 - Hours before event when cancellation was made: ${hoursBefore}
 - Organizer past cancellation rate: ${orgPercent}%
@@ -267,7 +367,7 @@ Inputs:
 
 Give a concise 3–4 sentence assessment:
 1) Is this more likely genuine, unclear, or suspicious?
-2) Which 2–3 factors mattered most?
+2) Which 2–3 factors (including real weather data if present) mattered most?
 3) What would you recommend to an insurance analyst (approve, decline, or escalate)?
 `;
 }
