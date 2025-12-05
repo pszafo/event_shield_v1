@@ -1,5 +1,7 @@
 // app/admin/agent-review/page.tsx
 
+export const dynamic = "force-dynamic";
+
 import { evaluateCancellation } from "../../../lib/cancellationEvaluator";
 import type { WeatherSeverity } from "../../../lib/cancellationEvaluator";
 import { inferWeatherFromOpenMeteo } from "../../../lib/openMeteo";
