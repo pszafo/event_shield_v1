@@ -53,65 +53,84 @@ export default async function ClaimReviewPage({
     <div style={{ padding: "20px" }}>
       <h1>Event Cancellation – Agent Review</h1>
 
-      <form method="GET">
-        <h3>Event Details</h3>
+      <form method="GET" style={{ 
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  maxWidth: "800px"
+}}>
+  
+  <h3 style={{ marginBottom: "-8px" }}>Event Details</h3>
 
-        <label>Event Date (YYYY-MM-DD)</label>
-        <input name="eventDate" placeholder="2025-02-20" />
-
-        <label>Latitude</label>
-        <input name="lat" placeholder="12.9716" />
-
-        <label>Longitude</label>
-        <input name="lon" placeholder="77.5946" />
-
-        <label>Organizer Reason</label>
-        <textarea
-          name="reason"
-          placeholder="Why did the organizer cancel?"
-        />
-
-        <label>Participant confirmations (%)</label>
-        <input name="yesRatio" placeholder="5" />
-
-        <label>Hours before event cancellation happened</label>
-        <input name="hoursBefore" placeholder="2" />
-
-        <label>Organizer cancellation rate (%)</label>
-        <input name="orgRate" placeholder="50" />
-
-        <button type="submit">Evaluate Cancellation</button>
-      </form>
-
-      {weatherInfo && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Weather Analysis</h3>
-          <p>
-            <b>Severity: </b> {weatherInfo.severity}
-          </p>
-          <p>{weatherInfo.explanation}</p>
-        </div>
-      )}
-
-      {evaluation && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Risk Assessment</h3>
-          <p>
-            <b>Reliability Score: </b>
-            {evaluation.reliabilityScore}
-          </p>
-          <p>
-            <b>Decision: </b> {evaluation.decision}
-          </p>
-
-          <h4>Factors Considered:</h4>
-          <ul>
-            {evaluation.factorNotes.map((note: string, i: number) => (
-              <li key={i}>{note}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+  {/* Event Date + Lat/Lon */}
+  <div style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px"
+  }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label>Event Date (YYYY-MM-DD)</label>
+      <input name="eventDate" placeholder="2025-02-20" />
     </div>
-  );
-}
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label>Latitude</label>
+      <input name="lat" placeholder="12.9716" />
+    </div>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label>Longitude</label>
+      <input name="lon" placeholder="77.5946" />
+    </div>
+  </div>
+
+  {/* Reason */}
+  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+    <label>Organizer Reason</label>
+    <textarea 
+      name="reason"
+      placeholder="Why did the organizer cancel?"
+      style={{ minHeight: "80px" }}
+    />
+  </div>
+
+  {/* Yes Ratio + Hours Before + Org Rate */}
+  <div style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px"
+  }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label>Participant confirmations (%)</label>
+      <input name="yesRatio" placeholder="5" />
+    </div>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label>Hours before event cancellation happened</label>
+      <input name="hoursBefore" placeholder="2" />
+    </div>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <label>Organizer cancellation rate (%)</label>
+      <input name="orgRate" placeholder="50" />
+    </div>
+  </div>
+
+  {/* Submit */}
+  <button 
+    type="submit"
+    style={{
+      marginTop: "16px",
+      background: "black",
+      color: "white",
+      padding: "12px 20px",
+      borderRadius: "6px",
+      border: "none",
+      cursor: "pointer",
+      fontSize: "16px",
+      width: "fit-content"
+    }}
+  >
+    Evaluate Cancellation
+  </button>
+</form>
