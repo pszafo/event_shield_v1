@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+// app/admin/agent-review/page.tsx
 
 import { evaluateCancellation } from "../../../lib/cancellationEvaluator";
 import type { WeatherSeverity } from "../../../lib/cancellationEvaluator";
@@ -9,86 +9,71 @@ function asString(v: any): string {
   return Array.isArray(v) ? v[0] : v || "";
 }
 
-type ClaimQuery = {
-  reason?: string
-  eventDate?: string
-  lat?: string
-  lon?: string
-  yesRatio?: string
-  hoursBefore?: string
-  orgRate?: string
-};
-
-export default async function ClaimReviewPage({
-  searchParams = {} as ClaimQuery,
-}) 
-
-
- {
+export default async function AgentReviewPage({ searchParams = {} }) {
   const reason = asString(searchParams.reason);
   const manualWeather = (asString(searchParams.weather) || "none") as WeatherSeverity;
   const yesRatioStr = asString(searchParams.yesRatio);
   const hoursBeforeStr = asString(searchParams.hoursBefore);
   const orgRateStr = asString(searchParams.orgRate);
 
-  const eventDate = asString(searchParams.eventDate);
-  const latStr = asString(searchParams.lat);
-  const lonStr = asString(searchParams.lon);
+  const eventDate = asString(searchParams.eventDate);  // <-- NEW
+  const latStr = asString(searchParams.lat);           // <-- NEW
+  const lonStr = asString(searchParams.lon);           // <-- NEW
 
-  const hasInput =
-    reason || yesRatioStr || hoursBeforeStr || orgRateStr || eventDate || latStr || lonStr;
+  const hasInput = reason || yesRatioStr || hoursBeforeStr || orgRateStr || eventDate || latStr || lonStr;
 
-  let weatherUsed: WeatherSeverity = manualWeather;
+  let weatherUsedForEval: WeatherSeverity = manualWeather;
   let weatherEvidence: string | null = null;
   let result = null;
   let aiSummary: string | null = null;
 
   if (hasInput) {
     const yesRatio = Math.min(1, Math.max(0, parseFloat(yesRatioStr) / 100 || 0));
-    const hoursBefore = parseFloat(hoursBeforeStr || "0");
+    const hoursBefore = Number(hoursBeforeStr || 0);
     const orgRate = Math.min(1, Math.max(0, parseFloat(orgRateStr) / 100 || 0));
 
-    // ---- WEATHER AUTO CHECK ----
+    // 🔥 USE OPEN-METEO IF DATE + LAT + LON EXIST
     if (eventDate && latStr && lonStr) {
       const lat = parseFloat(latStr);
       const lon = parseFloat(lonStr);
+
       if (!isNaN(lat) && !isNaN(lon)) {
         try {
           const inferred = await inferWeatherFromOpenMeteo(lat, lon, eventDate);
           if (inferred) {
-            weatherUsed = inferred.severity;
+            weatherUsedForEval = inferred.severity;
             weatherEvidence = inferred.explanation;
           } else {
-            weatherEvidence = "Weather data unavailable.";
+            weatherEvidence = "Could not fetch weather data from Open-Meteo.";
           }
-        } catch (err) {
-          weatherEvidence = "Open-Meteo API error; using manual weather severity.";
+        } catch (e) {
+          weatherEvidence = "Open-Meteo request failed — using manual weather severity.";
         }
       }
     }
 
-    // ---- RULE ENGINE ----
+    // 🧮 Rule engine evaluation
     result = evaluateCancellation({
       reason,
-      weatherSeverity: weatherUsed,
+      weatherSeverity: weatherUsedForEval,
       participantYesRatio: yesRatio,
       hoursBeforeEvent: hoursBefore,
       organizerCancellationRate: orgRate,
     });
 
-    // ---- AI LAYER ----
+    // 🤖 AI summary (optional)
     if (process.env.OPENAI_API_KEY) {
       try {
         const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         const completion = await client.chat.completions.create({
           model: "gpt-4.1-mini",
           messages: [
-            { role: "system", content: "Insurance claims analyst assistant." },
+            { role: "system", content: "Insurance analyst assistant." },
             {
               role: "user",
               content: `
-Claim reason: ${reason}
-Weather severity used: ${weatherUsed}
+Reason: ${reason}
+Weather used: ${weatherUsedForEval}
 Weather evidence: ${weatherEvidence}
 Score: ${result.reliabilityScore}
 Decision: ${result.decision}
@@ -97,33 +82,33 @@ Explain in 3 sentences.`,
           ],
         });
         aiSummary = completion.choices[0]?.message?.content || null;
-      } catch {
-        aiSummary = "AI failed or key missing.";
+      } catch (err) {
+        aiSummary = "AI failed (invalid key or quota).";
       }
     }
   }
 
   return (
     <div style={{ padding: "20px" }}>
-      <h1>Claim Review – Cancellation Analysis</h1>
+      <h1>Event Cancellation – Agent Review</h1>
 
-      <form method="GET" action="/admin/claim-review" style={{ marginTop: "20px" }}>
+      {/* FORM */}
+      <form method="GET" action="/admin/agent-review" style={{ marginTop: "20px" }}>
+        
+        {/* Reason */}
+        <label>Organizer's stated reason</label>
+        <textarea name="reason" defaultValue={reason} style={{ width: "100%", height: "70px", marginBottom: "20px" }} />
 
-        <label>Reason for cancellation</label>
-        <textarea
-          name="reason"
-          defaultValue={reason}
-          style={{ width: "100%", height: "70px", marginBottom: "20px" }}
-        />
-
+        {/* Manual weather severity */}
         <label>Manual weather severity (fallback)</label>
         <select name="weather" defaultValue={manualWeather} style={{ width: "100%", marginBottom: "20px" }}>
-          <option value="none">None</option>
+          <option value="none">None / clear</option>
           <option value="light">Light rain</option>
           <option value="heavy">Heavy rain</option>
           <option value="storm">Storm</option>
         </select>
 
+        {/* PARTICIPANT + HOURS */}
         <div style={{ display: "flex", gap: "20px" }}>
           <div style={{ flex: 1 }}>
             <label>Participant confirmations (%)</label>
@@ -135,14 +120,16 @@ Explain in 3 sentences.`,
           </div>
         </div>
 
+        {/* ORG RATE */}
         <div style={{ marginTop: "20px" }}>
-          <label>Organizer cancellation rate (%)</label>
+          <label>Organizer past cancellation rate (%)</label>
           <input name="orgRate" type="number" defaultValue={orgRateStr} style={{ width: "100%" }} />
         </div>
 
         <hr style={{ margin: "30px 0" }} />
 
-        <h3>Automatic Weather Verification</h3>
+        {/* 🔥 WEATHER AUTO CHECK SECTION */}
+        <h3>Automatic Weather Verification (Open-Meteo)</h3>
 
         <label>Event Date (YYYY-MM-DD)</label>
         <input name="eventDate" type="text" placeholder="2025-02-20" defaultValue={eventDate} style={{ width: "100%", marginBottom: "20px" }} />
@@ -153,15 +140,18 @@ Explain in 3 sentences.`,
         <label>Longitude</label>
         <input name="lon" type="text" placeholder="77.5946" defaultValue={lonStr} style={{ width: "100%", marginBottom: "20px" }} />
 
-        <button type="submit" style={{ padding: "12px 18px", background: "black", color: "white", marginTop: "20px" }}>
-          Review Claim
+        <button type="submit" style={{ marginTop: "20px", padding: "12px 18px", background: "black", color: "white" }}>
+          Evaluate cancellation
         </button>
+
       </form>
 
-      {result && (
+      {/* RESULTS */}
+      {result ? (
         <div style={{ marginTop: "40px" }}>
           <h2>Risk Assessment</h2>
-          <p><strong>Score:</strong> {result.reliabilityScore}</p>
+
+          <p><strong>Reliability score:</strong> {result.reliabilityScore}</p>
           <p><strong>Decision:</strong> {result.decision}</p>
 
           {weatherEvidence && (
@@ -171,10 +161,10 @@ Explain in 3 sentences.`,
             </>
           )}
 
-          <h3>AI Summary</h3>
-          <p>{aiSummary || "AI not available"}</p>
+          <h3>AI Opinion</h3>
+          <p>{aiSummary || "No AI evaluation."}</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
