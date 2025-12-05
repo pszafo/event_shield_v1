@@ -95,76 +95,80 @@ Explain in 3 sentences.`,
       {/* FORM */}
       <form method="GET" action="/admin/agent-review" style={{ marginTop: "20px" }}>
         
-        {/* Reason */}
-        <label>Organizer's stated reason</label>
-        <textarea name="reason" defaultValue={reason} style={{ width: "100%", height: "70px", marginBottom: "20px" }} />
+  {/* Reason */}
+  <label>Organizer's stated reason</label>
+  <textarea 
+    name="reason" 
+    defaultValue={reason} 
+    style={{ width: "100%", height: "70px", marginBottom: "20px" }} 
+  />
 
-        {/* Manual weather severity */}
-        <label>Manual weather severity (fallback)</label>
-        <select name="weather" defaultValue={manualWeather} style={{ width: "100%", marginBottom: "20px" }}>
-          <option value="none">None / clear</option>
-          <option value="light">Light rain</option>
-          <option value="heavy">Heavy rain</option>
-          <option value="storm">Storm</option>
-        </select>
+  {/* Manual weather */}
+  <label>Manual weather severity (fallback)</label>
+  <select 
+    name="weather" 
+    defaultValue={manualWeather} 
+    style={{ width: "100%", marginBottom: "20px" }}
+  >
+    <option value="none">None / clear</option>
+    <option value="light">Light rain</option>
+    <option value="heavy">Heavy rain</option>
+    <option value="storm">Storm</option>
+  </select>
 
-        {/* PARTICIPANT + HOURS */}
-        <div style={{ display: "flex", gap: "20px" }}>
-          <div style={{ flex: 1 }}>
-            <label>Participant confirmations (%)</label>
-            <input name="yesRatio" type="number" defaultValue={yesRatioStr} style={{ width: "100%" }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label>Hours before event cancellation</label>
-            <input name="hoursBefore" type="number" defaultValue={hoursBeforeStr} style={{ width: "100%" }} />
-          </div>
-        </div>
-
-        {/* ORG RATE */}
-        <div style={{ marginTop: "20px" }}>
-          <label>Organizer past cancellation rate (%)</label>
-          <input name="orgRate" type="number" defaultValue={orgRateStr} style={{ width: "100%" }} />
-        </div>
-
-        <hr style={{ margin: "30px 0" }} />
-
-        {/* 🔥 WEATHER AUTO CHECK SECTION */}
-        <h3>Automatic Weather Verification (Open-Meteo)</h3>
-
-        <label>Event Date (YYYY-MM-DD)</label>
-        <input name="eventDate" type="text" placeholder="2025-02-20" defaultValue={eventDate} style={{ width: "100%", marginBottom: "20px" }} />
-
-        <label>Latitude</label>
-        <input name="lat" type="text" placeholder="12.9716" defaultValue={latStr} style={{ width: "100%", marginBottom: "20px" }} />
-
-        <label>Longitude</label>
-        <input name="lon" type="text" placeholder="77.5946" defaultValue={lonStr} style={{ width: "100%", marginBottom: "20px" }} />
-
-        <button type="submit" style={{ marginTop: "20px", padding: "12px 18px", background: "black", color: "white" }}>
-          Evaluate cancellation
-        </button>
-
-      </form>
-
-      {/* RESULTS */}
-      {result ? (
-        <div style={{ marginTop: "40px" }}>
-          <h2>Risk Assessment</h2>
-
-          <p><strong>Reliability score:</strong> {result.reliabilityScore}</p>
-          <p><strong>Decision:</strong> {result.decision}</p>
-
-          {weatherEvidence && (
-            <>
-              <h3>Weather Evidence</h3>
-              <p>{weatherEvidence}</p>
-            </>
-          )}
-
-          <h3>AI Opinion</h3>
-          <p>{aiSummary || "No AI evaluation."}</p>
-        </div>
-      ) : null}
+  <div style={{ display: "flex", gap: "20px" }}>
+    <div style={{ flex: 1 }}>
+      <label>Participant confirmations (%)</label>
+      <input name="yesRatio" type="number" defaultValue={yesRatioStr} style={{ width: "100%" }} />
     </div>
-  );
-}
+
+    <div style={{ flex: 1 }}>
+      <label>Hours before event cancellation</label>
+      <input name="hoursBefore" type="number" defaultValue={hoursBeforeStr} style={{ width: "100%" }} />
+    </div>
+  </div>
+
+  <div style={{ marginTop: "20px" }}>
+    <label>Organizer past cancellation rate (%)</label>
+    <input name="orgRate" type="number" defaultValue={orgRateStr} style={{ width: "100%" }} />
+  </div>
+
+  <hr style={{ margin: "30px 0" }} />
+
+  {/* 🔥 NEW FIELDS BELOW */}
+  <h3>Automatic Weather Verification (Open-Meteo)</h3>
+
+  <label>Event Date (YYYY-MM-DD)</label>
+  <input 
+    name="eventDate"
+    type="text"
+    placeholder="2025-02-20"
+    defaultValue={eventDate}
+    style={{ width: "100%", marginBottom: "20px" }}
+  />
+
+  <label>Latitude</label>
+  <input 
+    name="lat"
+    type="text"
+    placeholder="12.9716"
+    defaultValue={latStr}
+    style={{ width: "100%", marginBottom: "20px" }}
+  />
+
+  <label>Longitude</label>
+  <input 
+    name="lon"
+    type="text"
+    placeholder="77.5946"
+    defaultValue={lonStr}
+    style={{ width: "100%", marginBottom: "20px" }}
+  />
+
+  <button 
+    type="submit"
+    style={{ marginTop: "20px", padding: "12px 18px", background: "black", color: "white" }}
+  >
+    Evaluate cancellation
+  </button>
+</form>
