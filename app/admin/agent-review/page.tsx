@@ -3,11 +3,10 @@
 import { evaluateCancellation } from "../../../lib/cancellationEvaluator";
 import { inferWeatherFromOpenMeteo } from "../../../lib/openMeteo";
 
-function asString(v: any) {
+function asString(v: any): string {
   return Array.isArray(v) ? v[0] : v || "";
 }
 
-// Query params TypeScript definition
 type ClaimQuery = {
   reason?: string;
   eventDate?: string;
@@ -18,20 +17,23 @@ type ClaimQuery = {
   orgRate?: string;
 };
 
-export default async function AgentReviewPage({
-  searchParams = {} as ClaimQuery,
-}) {
-  // parse values from query params
-  const reason = asString(searchParams.reason);
-  const eventDate = asString(searchParams.eventDate);
-  const lat = asString(searchParams.lat);
-  const lon = asString(searchParams.lon);
-  const yesRatio = Number(asString(searchParams.yesRatio || "0")) / 100;
-  const hoursBefore = Number(asString(searchParams.hoursBefore || "0"));
-  const orgRate = Number(asString(searchParams.orgRate || "0")) / 100;
+type AgentReviewProps = {
+  searchParams?: ClaimQuery;
+};
+
+export default async function AgentReviewPage({ searchParams }: AgentReviewProps) {
+  const params: ClaimQuery = searchParams || {};
+
+  const reason = asString(params.reason);
+  const eventDate = asString(params.eventDate);
+  const lat = asString(params.lat);
+  const lon = asString(params.lon);
+  const yesRatio = Number(asString(params.yesRatio ?? "0")) / 100;
+  const hoursBefore = Number(asString(params.hoursBefore ?? "0"));
+  const orgRate = Number(asString(params.orgRate ?? "0")) / 100;
 
   // Weather lookup from Open-Meteo
-  let weatherInfo: any = null;
+  let weatherInfo: { severity: string; explanation: string } | null = null;
   if (eventDate && lat && lon) {
     weatherInfo = await inferWeatherFromOpenMeteo(
       Number(lat),
@@ -40,12 +42,12 @@ export default async function AgentReviewPage({
     );
   }
 
-  // Evaluate cancellation only if minimum fields exist
-  let evaluation = null;
+  // Evaluate cancellation if we have enough info
+  let evaluation: any = null;
   if (reason && eventDate && lat && lon) {
     evaluation = evaluateCancellation({
       reason,
-      weatherSeverity: weatherInfo?.severity || "none",
+      weatherSeverity: (weatherInfo?.severity as any) || "none",
       participantYesRatio: yesRatio,
       hoursBeforeEvent: hoursBefore,
       organizerCancellationRate: orgRate,
@@ -59,7 +61,6 @@ export default async function AgentReviewPage({
       </h1>
 
       {/* FORM */}
-
       <form
         method="GET"
         style={{
@@ -172,4 +173,12 @@ export default async function AgentReviewPage({
 
           <h4>Factors Considered:</h4>
           <ul>
-            {eval
+            {evaluation.factorNotes.map((note: string, i: number) => (
+              <li key={i}>{note}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
