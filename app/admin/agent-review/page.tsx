@@ -9,7 +9,20 @@ function asString(v: any): string {
   return Array.isArray(v) ? v[0] : v || "";
 }
 
-export default async function AgentReviewPage({ searchParams = {} }) {
+type ClaimQuery = {
+  reason?: string
+  eventDate?: string
+  lat?: string
+  lon?: string
+  yesRatio?: string
+  hoursBefore?: string
+  orgRate?: string
+};
+
+export default async function AgentReviewPage({
+  searchParams = {} as ClaimQuery,
+})  
+{
   const reason = asString(searchParams.reason);
   const manualWeather = (asString(searchParams.weather) || "none") as WeatherSeverity;
   const yesRatioStr = asString(searchParams.yesRatio);
